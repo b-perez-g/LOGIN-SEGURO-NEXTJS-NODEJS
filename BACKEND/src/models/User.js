@@ -95,5 +95,37 @@ class User {
             if (connection) connection.release();
         }
     }
+
+    /**
+     * 
+     * @param {number} userId - ID del usuario a actualizar.
+     * @param {number} attempts - Número de intentos fallidos actuales.
+     * @param {Date|null} lockUntil - Fecha y hora hasta la que la cuenta permanecerá bloqueada, o `null` si no aplica.
+     * @returns {Promise<boolean>} - Devuelve `true` si el usuario fue actualizado correctamente.
+     * @throws {Error} - Lanza un error si ocurre algún problema durante la consulta a la base de datos.
+     */
+    static async updateLoginAttempts(userId, attempts, lockUntil = null) {
+        let connection;
+        try {
+            connection = await getConnection();
+            const query = `
+                UPDATE users
+                SET failed_login_attempts = ?, account_locked_until = ?
+                WHERE id = ?
+            `;
+            const [result] = await connection.execute(query, [attempts, lockUntil, userId]);
+            return result.affectedRows > 0;
+        } catch (error) {
+            console.error("Error actualizando intentos de login:", error);
+            throw error;    
+        } finally {
+            if (connection) connection.release();
+        }
+    }
 }
 
+(async () => {
+    const r = await User.updateLoginAttempts(1, 0);
+    console.log("¿Se actualizó?:", r);
+    process.exit();
+})();
